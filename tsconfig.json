@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "target": "ESNext",
+    "rootDir": "./src",
+    "outDir": "./build",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": true
+  },
+  "exclude": ["node_modules"],
+  "include": ["src/**/*", "globals.d.ts"]
+}
