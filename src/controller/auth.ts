@@ -61,6 +61,7 @@ async function signUp(req: express.Request, res: express.Response) {
       .status(201)
       .json({ message: "You have successfully created an account" });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
@@ -141,7 +142,7 @@ async function getSession(req: express.Request, res: express.Response) {
   try {
     const { session } = req;
 
-    res.status(200).json({ session });
+    res.status(200).json({ user: session.user });
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error" });
   }

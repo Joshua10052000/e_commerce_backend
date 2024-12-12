@@ -8,11 +8,14 @@ datasource db {
 }
 
 model User {
-  id       String    @id @default(uuid())
+  id       String  @id @default(uuid())
   name     String
-  email    String    @unique
+  email    String  @unique
   password String?
+
   accounts Account[]
+  reviews  Review[]
+  cart     Cart?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -30,4 +33,74 @@ model Account {
   updatedAt DateTime @updatedAt
 
   @@id([provider, providerAccountId])
+}
+
+model Product {
+  id          String     @id @default(uuid())
+  name        String
+  description String
+  priceCents  Int
+  images      String[]
+  categories  Category[]
+
+  reviews   Review[]
+  cartItems CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String
+  image       String
+  products    Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id          String @id @default(uuid())
+  userId      String
+  productId   String
+  description String
+  stars       Int
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Avoid multiple instance of review if already review in this product
+  @@unique([userId, productId])
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  cartItems CartItem[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CartItem {
+  id        String @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Avoid multiple instance of cart item if the product is in cart
+  @@unique([cartId, productId])
 }
