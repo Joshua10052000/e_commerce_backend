@@ -61,7 +61,6 @@ async function signUp(req: express.Request, res: express.Response) {
       .status(201)
       .json({ message: "You have successfully created an account" });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
@@ -122,20 +121,13 @@ async function signIn(req: express.Request, res: express.Response) {
 }
 
 async function signOut(req: express.Request, res: express.Response) {
-  try {
-    req.session.destroy((error) => {
-      if (error) {
-        res
-          .status(500)
-          .json({ message: "Something went wrong when destroying sessions" });
-        return;
-      }
-    });
-
+  req.session.destroy((error) => {
+    if (error) {
+      res.status(500).json({ message: "Internal Server Error" });
+      return;
+    }
     res.status(200).json({ message: "You have successfully signed out" });
-  } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
-  }
+  });
 }
 
 async function getSession(req: express.Request, res: express.Response) {

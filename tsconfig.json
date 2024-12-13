@@ -10,6 +10,5 @@
     "noUnusedParameters": true,
     "noImplicitAny": true
   },
-  "exclude": ["node_modules"],
-  "include": ["src/**/*", "globals.d.ts"]
+  "exclude": ["node_modules"]
 }

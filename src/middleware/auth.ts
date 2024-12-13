@@ -7,10 +7,11 @@ async function authenticate(
 ) {
   const { session } = req;
   const { user } = session;
-  console.error(user);
 
   if (!user) {
-    res.status(401).json({ message: "Singing in is required" });
+    res
+      .status(401)
+      .json({ message: "Authenticating is required, please sign in." });
     return;
   }
 

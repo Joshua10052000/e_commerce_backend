@@ -11,6 +11,7 @@ const productsQuery = z
       .transform((value) => parseInt(value))
       .optional(),
     search: z.string().optional(),
+    cursor: z.string().optional(),
   })
   .strict();
 
@@ -55,6 +56,16 @@ function buildQuery(query?: z.infer<typeof productsQuery>) {
     filters = { ...filters, take: query["limit"] };
   }
 
+  if (query["cursor"]) {
+    filters = {
+      ...filters,
+      cursor: {
+        id: query["cursor"],
+      },
+    };
+    filters.skip = 1;
+  }
+
   return filters;
 }
 
@@ -73,8 +84,10 @@ async function getProducts(req: express.Request, res: express.Response) {
     const products = await db.product.findMany({
       ...filters,
     });
+    const cursor =
+      products.length > 0 ? products[products.length - 1].id : null;
 
-    res.status(200).json({ products });
+    res.status(200).json({ products, cursor, count: products.length });
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error" });
   }
