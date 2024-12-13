@@ -11,6 +11,9 @@ const keys = {
     clientId: process.env.PAYPAL_CLIENT_ID,
     clientSecret: process.env.PAYPAL_CLIENT_SECRET,
   },
+  client: {
+    url: process.env.CLIENT_URL,
+  },
 };
 
 export default keys;

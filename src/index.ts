@@ -6,11 +6,10 @@ import path from "path";
 import keys from "./lib/keys.js";
 import sessionStore from "./lib/session-store.js";
 import router from "./routes/api/index.js";
-import axios from "axios";
 
 const app = express();
 
-app.use(cors({ credentials: true, origin: ["http://localhost:5173"] }));
+app.use(cors({ credentials: true, origin: [keys.client.url] }));
 
 app.use(express.static(path.resolve("./public")));
 

@@ -11,6 +11,8 @@ declare global {
       PAYPAL_CLIENT_ID: string;
       PAYPAL_CLIENT_SECRET: string;
       PAYPAL_ACCESS_TOKEN?: string;
+
+      CLIENT_URL: string;
     }
   }
 
