@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npx tsc\" \"npx tsc --watch\" \"node --watch ./build/index.js\""
+    "dev": "concurrently \"npx tsc\" \"npx tsc --watch\" \"node --watch ./build/index.js\"",
+    "build": "concurrently \"npx tsc\" \"npx prisma generate\"",
+    "start": "node ./build/index.js"
   },
   "keywords": [],
   "author": "",
