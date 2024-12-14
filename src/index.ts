@@ -52,12 +52,15 @@ app.post(
   }
 );
 
-const options: https.RequestOptions = {
-  cert: fs.readFileSync("C:/Windows/System32/localhost.pem"),
-  key: fs.readFileSync("C:/Windows/System32/localhost-key.pem"),
-};
+const server =
+  keys.server.mode !== "production"
+    ? https.createServer({
+        cert: fs.readFileSync("C:/Windows/System32/localhost.pem"),
+        key: fs.readFileSync("C:/Windows/System32/localhost-key.pem"),
+      })
+    : app;
 
-https.createServer(options, app).listen(keys.server.port, () => {
+server.listen(keys.server.port, () => {
   console.log(`Server running on port: ${keys.server.port}`);
   console.log(`https://localhost:${keys.server.port}`);
 });
