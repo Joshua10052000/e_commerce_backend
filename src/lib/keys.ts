@@ -15,6 +15,7 @@ const keys = {
   },
   client: {
     url: process.env.CLIENT_URL,
+    productionUrl: process.env.CLIENT_PRODUCTION_URL,
   },
 };
 

@@ -13,6 +13,7 @@ declare global {
       PAYPAL_ACCESS_TOKEN?: string;
 
       CLIENT_URL: string;
+      CLIENT_PRODUCTION_URL: string;
     }
   }
 
