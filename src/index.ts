@@ -20,6 +20,7 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 
 const opts: session.SessionOptions = {
+  proxy: true,
   store: sessionStore,
   saveUninitialized: false,
   resave: false,
@@ -29,10 +30,9 @@ const opts: session.SessionOptions = {
     sameSite: keys.server.mode !== "production" ? "strict" : "none",
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7,
+    domain: ".onrender.com",
   },
 };
-
-console.log(opts);
 
 app.use(session(opts));
 
