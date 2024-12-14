@@ -10,7 +10,12 @@ import router from "./routes/api/index.js";
 
 const app = express();
 
-app.use(cors({ credentials: true, origin: [keys.client.url] }));
+app.use(
+  cors({
+    credentials: true,
+    origin: [keys.client.url, keys.client.productionUrl],
+  })
+);
 
 app.use(express.static(path.resolve("./public")));
 
