@@ -11,8 +11,6 @@ const app = express();
 
 app.use(cors({ credentials: true, origin: [keys.client.url] }));
 
-console.log({ client: keys.client.url }, "");
-
 app.use(express.static(path.resolve("./public")));
 
 app.use(express.json());
@@ -21,20 +19,22 @@ app.use(cookieParser());
 
 app.use(express.urlencoded({ extended: false }));
 
-app.use(
-  session({
-    store: sessionStore,
-    saveUninitialized: false,
-    resave: false,
-    secret: keys.server.sessionSecret,
-    cookie: {
-      secure: keys.server.mode === "production",
-      sameSite: keys.server.mode !== "production" ? "strict" : "none",
-      httpOnly: true,
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-    },
-  })
-);
+const opts: session.SessionOptions = {
+  store: sessionStore,
+  saveUninitialized: false,
+  resave: false,
+  secret: keys.server.sessionSecret,
+  cookie: {
+    secure: keys.server.mode === "production",
+    sameSite: keys.server.mode !== "production" ? "strict" : "none",
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  },
+};
+
+console.log(opts);
+
+app.use(session(opts));
 
 app.get("/", (_, res) => {
   res.send("Hello, World!");
