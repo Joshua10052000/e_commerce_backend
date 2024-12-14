@@ -10,6 +10,10 @@ import router from "./routes/api/index.js";
 
 const app = express();
 
+if (keys.server.mode === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(
   cors({
     credentials: true,
@@ -54,10 +58,13 @@ app.post(
 
 const server =
   keys.server.mode !== "production"
-    ? https.createServer({
-        cert: fs.readFileSync("C:/Windows/System32/localhost.pem"),
-        key: fs.readFileSync("C:/Windows/System32/localhost-key.pem"),
-      })
+    ? https.createServer(
+        {
+          cert: fs.readFileSync("C:/Windows/System32/localhost.pem"),
+          key: fs.readFileSync("C:/Windows/System32/localhost-key.pem"),
+        },
+        app
+      )
     : app;
 
 server.listen(keys.server.port, () => {
