@@ -11,6 +11,8 @@ const app = express();
 
 app.use(cors({ credentials: true, origin: [keys.client.url] }));
 
+console.log({ client: keys.client.url }, "");
+
 app.use(express.static(path.resolve("./public")));
 
 app.use(express.json());
@@ -33,6 +35,10 @@ app.use(
     },
   })
 );
+
+app.get("/", (_, res) => {
+  res.send("Hello, World!");
+});
 
 app.use("/api", router);
 
