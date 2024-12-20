@@ -13,9 +13,11 @@ model User {
   email    String  @unique
   password String?
 
-  accounts Account[]
-  reviews  Review[]
-  cart     Cart?
+  accounts  Account[]
+  reviews   Review[]
+  wishlists Wishlist[]
+  orders    Order[]
+  cart      Cart?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -46,12 +48,14 @@ model Product {
   id          String     @id @default(uuid())
   name        String
   description String
-  priceCents  Int
+  priceCents  Float
   images      String[]
   categories  Category[]
 
-  reviews   Review[]
-  cartItems CartItem[]
+  reviews    Review[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  wishlists  Wishlist[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -110,4 +114,43 @@ model CartItem {
 
   // Avoid multiple instance of cart item if the product is in cart
   @@unique([cartId, productId])
+}
+
+model Wishlist {
+  id        String @id @default(uuid())
+  userId    String
+  productId String
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+}
+
+model Order {
+  id         String      @id @default(uuid())
+  userId     String
+  totalCents Float
+  orderItems OrderItem[]
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+  id        String @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -7,6 +7,7 @@ declare global {
       SERVER_NODE_ENV: "production" | "development" | "testing";
       SERVER_SESSION_SECRET: string;
       SERVER_DATABASE_URL: string;
+      SERVER_PRODUCTION_URL: string;
 
       PAYPAL_CLIENT_ID: string;
       PAYPAL_CLIENT_SECRET: string;

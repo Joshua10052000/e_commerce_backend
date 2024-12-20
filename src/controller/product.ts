@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 const productsQuery = z
   .object({
     "category-name": z.string().optional(),
+    "user-wishlists": z.string().optional(),
     limit: z
       .string()
       .transform((value) => parseInt(value))
@@ -64,6 +65,13 @@ function buildQuery(query?: z.infer<typeof productsQuery>) {
       },
     };
     filters.skip = 1;
+  }
+
+  if (query["user-wishlists"]) {
+    filters = {
+      ...filters,
+      where: { wishlists: { some: { userId: query["user-wishlists"] } } },
+    };
   }
 
   return filters;

@@ -3,7 +3,7 @@ import keys from "./keys.js";
 
 const db = globalThis.prismaGlobal ?? new PrismaClient();
 
-if (keys.server.mode !== "production") {
+if (keys.server.environment !== "production") {
   globalThis.prismaGlobal = db;
 }
 

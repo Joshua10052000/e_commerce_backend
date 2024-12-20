@@ -1,51 +1,21 @@
 import express from "express";
-import { authenticate } from "../../middleware/auth.js";
+import { Item, paypalAdapter, PurchaseUnit } from "../../lib/paypal-adapter.js";
 import db from "../../lib/db.js";
-import { Item, Link, Order, PurchaseUnit } from "../../types/paypal.js";
-import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import keys from "../../lib/keys.js";
-
-let tokenExpiry: number | null = null;
-let paypalToken: string | null = null;
-
-async function getToken() {
-  if (paypalToken && tokenExpiry && Date.now() < tokenExpiry) {
-    return paypalToken;
-  }
-
-  const idSecret = `${keys.paypal.clientId}:${keys.paypal.clientSecret}`;
-  const credentials = Buffer.from(idSecret).toString("base64");
-
-  const url = "https://api-m.sandbox.paypal.com/v1/oauth2/token";
-
-  const headers = {
-    "Content-Type": "application/x-www-form-urlencoded",
-    Authorization: `Basic ${credentials}`,
-  };
-
-  try {
-    const response = await axios.post<{
-      access_token: string;
-      expires_in: number;
-    }>(url, { grant_type: "client_credentials" }, { headers });
-
-    const { data } = response;
-
-    paypalToken = data.access_token;
-    tokenExpiry = Date.now() + data.expires_in * 1000;
-
-    process.env.PAYPAL_ACCESS_TOKEN = paypalToken;
-
-    return paypalToken;
-  } catch (error) {
-    console.error("Error fetching PayPal token:", error);
-    return null;
-  }
-}
+import { z } from "zod";
+import {
+  convertCentsToDollars,
+  convertDollarsToCents,
+} from "../../lib/utils.js";
 
 const router = express.Router();
 
-router.use(authenticate);
+const CURRENCY_CODE = "USD";
+const INTENT = "CAPTURE";
+
+const schema = {
+  captureParams: z.object({ orderId: z.string() }),
+};
 
 router.post("/create", async (req, res) => {
   const { session } = req;
@@ -56,23 +26,14 @@ router.post("/create", async (req, res) => {
     return;
   }
 
-  const accessToken = await getToken();
-  if (!accessToken) {
-    res.status(500).json({ message: "Internal Server Error" });
-    return;
-  }
-
   try {
     const foundCart = await db.cart.findUnique({
       where: { userId: user.id },
       select: {
         id: true,
         cartItems: {
-          select: {
-            quantity: true,
-            product: {
-              select: { priceCents: true, name: true, description: true },
-            },
+          include: {
+            product: true,
           },
         },
       },
@@ -84,78 +45,135 @@ router.post("/create", async (req, res) => {
     }
 
     const cartItems: Item[] = foundCart.cartItems.map((cartItem) => {
-      return {
+      const item: Item = {
         name: cartItem.product.name,
         quantity: `${cartItem.quantity}`,
         unit_amount: {
-          currency_code: "USD",
-          value: `${cartItem.product.priceCents / 100}`,
+          currency_code: CURRENCY_CODE,
+          value: `${convertCentsToDollars(cartItem.product.priceCents)}`,
         },
-        description: cartItem.product.description,
+        category: "PHYSICAL_GOODS",
+        description: cartItem.product.description.slice(0, 127),
+        url: `${keys.client.url}/products/${cartItem.product.id}`,
       };
+
+      return item;
     });
 
-    const total = cartItems.reduce(
-      (pr, cr) =>
-        (pr += parseFloat(cr.unit_amount.value) * parseInt(cr.quantity)),
-      0
-    );
+    const cartItemsTotal = cartItems
+      .reduce((cr, pr) => {
+        const priceCents = convertDollarsToCents(
+          parseFloat(pr.unit_amount.value)
+        );
+        const quantity = parseInt(pr.quantity);
 
-    const purchaseUnits: PurchaseUnit[] = [
-      {
-        reference_id: foundCart.id,
-        items: cartItems,
-        amount: {
-          currency_code: "USD",
-          value: `${total}`,
-          breakdown: {
-            item_total: {
-              currency_code: "USD",
-              value: `${total}`,
-            },
+        return (cr += convertCentsToDollars(priceCents * quantity));
+      }, 0)
+      .toString();
+
+    const cartUnit: PurchaseUnit = {
+      reference_id: foundCart.id,
+      amount: {
+        currency_code: CURRENCY_CODE,
+        value: cartItemsTotal,
+        breakdown: {
+          item_total: {
+            currency_code: CURRENCY_CODE,
+            value: cartItemsTotal,
           },
         },
       },
-    ];
+      items: cartItems,
+    };
 
-    const body: Order = {
-      intent: "CAPTURE",
+    const purchaseUnits: PurchaseUnit[] = [cartUnit];
+
+    const order = await paypalAdapter.createOrder({
+      intent: INTENT,
       purchase_units: purchaseUnits,
-      application_context: {
-        return_url: "http://localhost:5173/checkout?success=true",
-        cancel_url: "http://localhost:5173/checkout?success=false",
+      payment_source: {
+        paypal: {
+          experience_context: {
+            brand_name: "Bazario",
+            landing_page: "NO_PREFERENCE",
+            user_action: "CONTINUE",
+            return_url: `${keys.client.url}/checkout`,
+            cancel_url: `${keys.client.url}/cart`,
+          },
+          email_address: user.email,
+          name: {
+            given_name: user.name,
+          },
+        },
       },
-    };
+    });
 
-    const headers: AxiosRequestConfig["headers"] = {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    };
+    res.status(200).json({ order });
+  } catch (error) {
+    res.status(500).json({ message: "Unexpected error occured" });
+  }
+});
 
-    const response = await axios.post(
-      "https://api-m.sandbox.paypal.com/v2/checkout/orders",
-      body,
-      { headers }
+router.get("/confirm/:orderId", async (req, res) => {
+  const { params, session } = req;
+  const { user } = session;
+
+  if (!user) {
+    res.status(401).json({ message: "Signing in is required" });
+    return;
+  }
+
+  const parsedParams = schema.captureParams.safeParse(params);
+
+  if (!parsedParams.success) {
+    res.status(400).json({ message: parsedParams.error.message });
+    return;
+  }
+
+  try {
+    const foundOrder = await paypalAdapter.getOrderDetails(
+      parsedParams.data.orderId
     );
 
-    const { data } = response;
-    const { links }: { links: Link[] } = data;
-
-    const approveLink = links.find((link) => link.rel === "approve");
-
-    res.status(200).json({ link: approveLink });
-  } catch (error) {
-    if (error instanceof AxiosError) {
-      const { response } = error;
-
-      if (response) {
-        const { data } = response;
-
-        res.status(400).json({ message: data.message });
-        return;
-      }
+    if (!foundOrder) {
+      res.status(404).json({ message: "Order does not exists" });
+      return;
     }
-    res.status(500).json({ message: "Internal Server Error" });
+
+    const foundCart = await db.cart.findUnique({
+      where: { userId: user.id },
+      include: { cartItems: true },
+    });
+
+    if (!foundCart) {
+      res.status(404).json({ message: "Cart does not exists" });
+      return;
+    }
+
+    const totalCents = convertDollarsToCents(
+      parseFloat(foundOrder.purchase_units[0].amount.value)
+    );
+
+    await db.order.create({
+      data: {
+        totalCents,
+        userId: user.id,
+        orderItems: {
+          createMany: {
+            data: foundCart.cartItems.map((cartItem) => ({
+              productId: cartItem.productId,
+              quantity: cartItem.quantity,
+            })),
+          },
+        },
+      },
+    });
+
+    await db.cart.delete({ where: { id: foundCart.id } });
+
+    res.status(201).json({ message: "User has successfully checkout" });
+  } catch (error) {
+    res.status(500).json({ message: "Unexpected error occured" });
   }
 });
 

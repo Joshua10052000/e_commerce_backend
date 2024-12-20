@@ -10,14 +10,14 @@ import router from "./routes/api/index.js";
 
 const app = express();
 
-if (keys.server.mode === "production") {
+if (keys.server.environment === "production") {
   app.set("trust proxy", 1);
 }
 
 app.use(
   cors({
     credentials: true,
-    origin: [keys.client.url, keys.client.productionUrl],
+    origin: [keys.client.url],
   })
 );
 
@@ -33,8 +33,8 @@ const opts: session.SessionOptions = {
   resave: false,
   secret: keys.server.sessionSecret,
   cookie: {
-    secure: keys.server.mode === "production",
-    sameSite: keys.server.mode !== "production" ? "strict" : "none",
+    secure: keys.server.environment === "production",
+    sameSite: keys.server.environment !== "production" ? "strict" : "none",
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
@@ -48,16 +48,8 @@ app.get("/", (_, res) => {
 
 app.use("/api", router);
 
-app.post(
-  "/webhooks/paypal",
-  express.raw({ type: "application/json" }),
-  async (_, res) => {
-    res.sendStatus(200);
-  }
-);
-
 const server =
-  keys.server.mode !== "production"
+  keys.server.environment !== "production"
     ? https.createServer(
         {
           cert: fs.readFileSync("C:/Windows/System32/localhost.pem"),
